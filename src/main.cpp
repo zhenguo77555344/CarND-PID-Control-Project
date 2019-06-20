@@ -5,9 +5,15 @@
 #include "json.hpp"
 #include "PID.h"
 
+#include<numeric>
+#include<vector>
+#include <algorithm>
+#include <stdlib.h>
+
 // for convenience
 using nlohmann::json;
 using std::string;
+using namespace std;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -34,14 +40,9 @@ int main() {
   uWS::Hub h;
 
   PID Controler;
-  /**
-   * TODO: Initialize the pid variable.
-   */
- 
- 
 
-  //Controler.Init(Kp,Ki,Kd,Error);
-  
+  Controler.Init(0.2,0.0,3.0);//Initialize the pid variable.
+
   h.onMessage([&Controler](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -59,12 +60,10 @@ int main() {
         static double int_cte;
         double Kp,Ki,Kd;
         double Error;
-        Kp = 0.2;
-        Ki = 0;
-        Kd = 3.0;
+        Kp = 0.2; //0.2
+        Ki = 0.0;   //0
+        Kd = 3.0; //3
         Error = 0;
-
-
 
         if (event == "telemetry") {
           // j[1] is the data JSON object
@@ -72,38 +71,59 @@ int main() {
           double speed = std::stod(j[1]["speed"].get<string>());
           double angle = std::stod(j[1]["steering_angle"].get<string>());
           double steer_value;
-
+          double throttle_value;
 
           double angle_err;
           double diff_cte;
 
-          /**
-           * TODO: Calculate steering value here, remember the steering value is [-1, 1].
-           * NOTE: Feel free to play around with the throttle and speed.
-           *   Maybe use another PID controller to control the speed!
-           */
-          
-
-          //Controler.UpdateError(cte,pre_cte);
-          //pre_cte =cte;
-          //angle_err = Controler.TotalError();
-          //std::cout<<"para.size()"<<angle_err<<std::endl;
-
           diff_cte = cte -pre_cte;
           int_cte = int_cte +cte;
-          steer_value = -Kp * cte - Kd * diff_cte - Ki * int_cte;
-          pre_cte = cte;
-          //std::cout<<"PID:---->"<<Kp<<","<<Ki<<","<<Kd<<std::endl;
+          Controler.UpdateError(cte,pre_cte);
 
-          //it=it+1;
-          // DEBUG
-          //std::cout <<"Iteration: "<<it<< " CTE: " << cte << " Steering Value: " << steer_value <<" Speed:"<<speed<<" Steering_angle: "<<angle << std::endl;
-          std::cout<<"PID--->"<<Kp<<","<<Ki<<","<<Kd<<std::endl;
+          steer_value = Controler.GetSteerValue();
+
+          pre_cte = cte;
+
           std::cout << cte << ","<<diff_cte<<","<<int_cte<<","<<steer_value<<","<<speed<<","<<angle << std::endl;
+
+          double tolerance =0.0001;
+          double arr_dp[] = {1,1,1};
+          double arr_p[] = {0,0,0};
+          double sum_dp;
+          vector<double> dp(&arr_dp[0],&arr_dp[3]);
+          vector<double> p(&arr_p[0],&arr_p[3]);
+
+          sum_dp = accumulate(dp.begin(),dp.end(),0);
+          //std::cout <<"sum_dp:-->"<<sum_dp<<std::endl;
+
+
+          /*
+          while(sum_dp > tolerance){
+            
+            for(int i = 0;i<p.size();i++){
+              //cout<<"i = "<<i<<endl;
+              p.at(i) +=dp.at(i);
+              
+              if(abs(cte)>=1.0){
+                throttle_value =0.0;            
+              }
+              else{
+                Controler.UpdateError(cte,pre_cte);
+                throttle_value =0.3;
+
+
+              }
+                                   
+
+            }
+          //steer_value =0.02;
+          }
+          */
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.3;
+          //msgJson["throttle"] = throttle_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //std::cout << msg << std::endl;//"steering_angle":-3.28192,"throttle":0.3
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

@@ -14,15 +14,13 @@ PID::PID() {
 
 PID::~PID() {}
 
-void PID::Init(double Kp, double Ki, double Kd,double Error) {
+void PID::Init(double Kp, double Ki, double Kd) {
   /**
    * Initialize PID coefficients (and errors, if needed)
    */
   m_Kp = Kp;
   m_Ki = Ki;
   m_Kd = Kd;
-  m_error = Error;
-
 }
 
 void PID::UpdateError(double cte,double pre_cte) {
@@ -38,6 +36,8 @@ void PID::UpdateError(double cte,double pre_cte) {
   
   m_steer_value = -m_Kp * cte - m_Kd * diff_cte - m_Ki * int_cte;
 
+  //m_steer_value = -m_Kp * cte - m_Kd * diff_cte - 0 * int_cte;
+
   m_error = cte*cte;
 
 }
@@ -50,9 +50,6 @@ double PID::TotalError() {
   para.push_back(m_Kp);
   para.push_back(m_Ki);
   para.push_back(m_Kd);
-
-  
-
 
   return para.size();  // TODO: Add your total error calc here!
 }
